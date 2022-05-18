@@ -1,0 +1,2 @@
+strike,symbol,right,multiplier,expiration,bid,ask,undPrice,modelDelta,modelGamma,modelIV,modelPrice,modelTheta,modelVega,Quantity,Trade
+625,TSLA,P,100,20220610,15.939499999999995,16.2225,723,-0.222906588,0.001838522,0.861196104,23.50204494,-0.971778351,0.545730144,3,Buy
