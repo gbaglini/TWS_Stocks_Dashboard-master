@@ -17,7 +17,6 @@ from utils_IB import IbConnect ,OptionPortflio,multi_plotter
 from dash.exceptions import PreventUpdate
 
 
-
 #from ScenarioAnalysis import df_indices
 import yfinance as yf
 
@@ -36,14 +35,14 @@ app = dash.Dash(
     ] ,
 )
 
-app.title='Risk Management Dashboard'
+app.title='OptionAnalytica'
 app.config.suppress_callback_exceptions = True
 
 components_colors={ 'Main Header Background': ['#0b1a50', '#0b1a50'], 'Main Background': ['#e7f0f9', '#e7f0f9'],
                     'Main Header Text': ['white', 'white']}
 
 
-header_text=html.Div('Risk Management Dashboard',id='main_header_text',className='main-header',
+header_text=html.Div('OptionAnalytica',id='main_header_text',className='main-header',
                      style=dict(color=components_colors['Main Header Text'][0],
                      fontWeight='bold',fontSize='2.5vh',marginTop='',marginLeft='',width='100%',paddingTop='1vh',paddingBottom='',
                      display= 'flex', alignItems= 'center', justifyContent= 'center'))
@@ -85,7 +84,6 @@ tabs=dcc.Tabs(id="tabs", value='Main Page',vertical=True, children=[
     dcc.Tab(label='Main Page', value='Main Page', style=tab_style, selected_style=tab_selected_style),
     dcc.Tab(label='Build Portfolio', value='Build Portfolio', style=tab_style, selected_style=tab_selected_style),
     dcc.Tab(label='Portfolio Stats', value='Portfolio Stats', style=tab_style, selected_style=tab_selected_style),
-    dcc.Tab(label='Intraday Stress Test', value='Intraday Stress Test', style=tab_style, selected_style=tab_selected_style),
     dcc.Tab(label='Scenario Analysis', value='Scenario Analysis', style=tab_style, selected_style=tab_selected_style)
 ], style=tabs_styles)
 
@@ -94,9 +92,9 @@ image_header1=html.Div('OptionAnalytica',id='image_header1',className='main-head
                      fontWeight='bold',fontSize='2.5vh',marginTop='',marginLeft='',width='100%',paddingTop='',paddingBottom='',
                      display= 'flex', alignItems= 'center', justifyContent= 'center'))
 
-image_header2=html.Div("The first dashboard for options portfolio stress testing",id='image_header2',className='main-header',
+image_header2=html.Div("The first dashboard for options scenario analysis",id='image_header2',className='main-header',
                      style=dict(color='#0b1a50',
-                     fontWeight='bold',fontSize='2vh',marginTop='',marginLeft='',width='100%',paddingTop='',paddingBottom='',
+                     fontWeight='bold',fontSize='2.5vh',marginTop='',marginLeft='',width='100%',paddingTop='',paddingBottom='',
                      display= 'flex', alignItems= 'center', justifyContent= 'center'))
 
 image_header3=html.Div("Version: Beta 1.0.0",id='image_header3',className='main-header',
@@ -104,7 +102,7 @@ image_header3=html.Div("Version: Beta 1.0.0",id='image_header3',className='main-
                      fontWeight='bold',fontSize='1.8vh',marginTop='',marginLeft='',width='100%',paddingTop='',paddingBottom='',
                      display= 'flex', alignItems= 'left', justifyContent= 'left'))
 
-image_header4=html.Div("Devs: Gianluca Baglini, Davide Alcala",id='image_header4',className='main-header',
+image_header4=html.Div("Devs: Gianluca Baglini, David Alcalà",id='image_header4',className='main-header',
                      style=dict(color='#0b1a50',
                      fontWeight='bold',fontSize='1.8vh',fontColor='black',marginLeft='',width='100%',paddingTop='',paddingBottom='',
                      display= 'flex', alignItems= 'left', justifyContent= 'left'))
@@ -125,7 +123,7 @@ main_page_layout=[ dbc.Col([dbc.Card(dbc.CardBody([
                                   md=dict(size=4, offset=0), sm=dict(size=12, offset=0), xs=dict(size=12, offset=0),
                                   style=dict(paddingLeft='', paddingRight='', border='')),
 
-        dbc.Col([image_header1,html.Br(),image_header2,html.Br(), main_img, html.Br(), html.Br(),image_header3 ,html.Br(),image_header4
+        dbc.Col([image_header2,html.Br(), main_img, html.Br(), html.Br(),image_header3 ,html.Br(),image_header4
                                    ], xl=dict(size=8, offset=0), lg=dict(size=8, offset=0),
                                   md=dict(size=4, offset=0), sm=dict(size=12, offset=0), xs=dict(size=12, offset=0),
                                   style=dict(paddingLeft='', paddingRight='', border=''))
@@ -187,8 +185,6 @@ def update_tab_content(selected_tab):
                     selected_style=tab_selected_style),
             dcc.Tab(label='Portfolio Stats', value='Portfolio Stats', style=tab_style,
                     selected_style=tab_selected_style),
-            dcc.Tab(label='Intraday Stress Test', value='Intraday Stress Test', style=tab_style,
-                    selected_style=tab_selected_style),
             dcc.Tab(label='Scenario Analysis', value='Scenario Analysis', style=tab_style,
                     selected_style=tab_selected_style)
         ], style=tabs_styles)
@@ -202,8 +198,6 @@ def update_tab_content(selected_tab):
                     selected_style=tab_selected_style),
             dcc.Tab(label='Portfolio Stats', value='Portfolio Stats', style=tab_style,
                     selected_style=tab_selected_style),
-            dcc.Tab(label='Intraday Stress Test', value='Intraday Stress Test', style=tab_style,
-                    selected_style=tab_selected_style),
             dcc.Tab(label='Scenario Analysis', value='Scenario Analysis', style=tab_style,
                     selected_style=tab_selected_style)
         ], style=tabs_styles)
@@ -216,16 +210,11 @@ def update_tab_content(selected_tab):
                     selected_style=tab_selected_style),
             dcc.Tab(label='Portfolio Stats', value='Portfolio Stats', style=tab_style,
                     selected_style=tab_selected_style),
-            dcc.Tab(label='Intraday Stress Test', value='Intraday Stress Test', style=tab_style,
-                    selected_style=tab_selected_style),
             dcc.Tab(label='Scenario Analysis', value='Scenario Analysis', style=tab_style,
                     selected_style=tab_selected_style)
         ], style=tabs_styles)
 
         return (Portfolio_Stats.prepare_stats_layout(tabs),'pressed')
-
-    elif selected_tab=='Intraday Stress Test':
-        return ( html.Div('{} Content'.format(selected_tab),style=dict(textAlign='center')) ,'')
 
     elif selected_tab=='Scenario Analysis':
         tabs = dcc.Tabs(id="tabs", value=selected_tab, vertical=True, children=[
@@ -233,8 +222,6 @@ def update_tab_content(selected_tab):
             dcc.Tab(label='Build Portfolio', value='Build Portfolio', style=tab_style,
                     selected_style=tab_selected_style),
             dcc.Tab(label='Portfolio Stats', value='Portfolio Stats', style=tab_style,
-                    selected_style=tab_selected_style),
-            dcc.Tab(label='Intraday Stress Test', value='Intraday Stress Test', style=tab_style,
                     selected_style=tab_selected_style),
             dcc.Tab(label='Scenario Analysis', value='Scenario Analysis', style=tab_style,
                     selected_style=tab_selected_style)
@@ -316,7 +303,7 @@ def update_line_chart(stock,expiration,portfolio_created,df_proc):
             rangeslider_visible=False
         ) ,margin=dict(l=0, r=0, t=40, b=0)
     )
-
+    line_fig.add_hline(y=0.0, line_color="red")
     line_fig.update_xaxes(showgrid=False, showline=True, zeroline=False, linecolor='#0b1a50')
     line_fig.update_yaxes(showgrid=False, showline=True, zeroline=False, linecolor='#0b1a50')
     return line_fig
@@ -339,7 +326,7 @@ def get_exchanges(ticker):
                                    low=df_data['low'], close=df_data['close'])
                     ])
     fig.update_layout(
-        title='Time Series Chart', xaxis_title='Date',
+        title='{}'.format(ticker), xaxis_title='Date', yaxis_title="Stock Price",
         font=dict(size=14, family='Arial', color='#0b1a50'), hoverlabel=dict(
             font_size=16, font_family="Rockwell", font_color='white', bgcolor='#0b1a50'), plot_bgcolor='#F5F5F5',
         paper_bgcolor='#F5F5F5',
@@ -454,7 +441,6 @@ def create_portfolio(clicks,ticker_changed,portfolio_data):
 
 @app.callback([Output('display-option-chain', 'children'),Output('options_exception','children')],
                Input('get-chain-in', 'n_clicks'),
-
               [State('store-options-exch', 'data'),State('opt-type', 'value'),
                State('exchanges-out', 'value'),State('select-ticker', 'value')],
                prevent_initial_call=True)
@@ -481,6 +467,39 @@ def get_option_chain(n_clicks ,dict_exchange , right, exchange,ticker ):
         else:
             raise PreventUpdate
 
+        cols_to_format2f = ["bid", "ask", "undPrice"]
+        cols_to_format3f = ["modelDelta", "modelGamma", "modelIV", "modelPrice", "modelTheta", "modelVega"]
+        my_df[cols_to_format2f] = my_df[cols_to_format2f].applymap('{:,.2f}'.format)
+        my_df[cols_to_format3f] = my_df[cols_to_format3f].applymap('{:,.3f}'.format)
+
+        undPrice = my_df["undPrice"].values[0]
+        my_df['maturity'] = pd.to_datetime(my_df["expiration"], format='%Y%m%d') - pd.Timestamp.now().normalize()
+        my_df["maturity"] = my_df["maturity"].astype(str).str.replace("days", "").astype(float)
+        my_df["moneyness"] = my_df["strike"] / my_df["undPrice"].astype(float)
+        # z_data = z_data.set_index("maturity")
+        data_3D = my_df.pivot_table(index='moneyness', columns='maturity', values="modelIV")
+
+        fig3D = go.Figure(data=[go.Surface(z=data_3D.values)])
+        fig3D.update_layout(title='Volatilty Surface', autosize=False,
+                          width=500, height=500,
+                          margin=dict(l=65, r=50, b=65, t=90))
+        fig3D.show()
+
+
+        data_smile = pd.pivot_table(my_df, values='modelIV', index=['strike'],columns='expiration')
+
+        # ploty
+        figline = go.Figure()
+        for col in data_smile.columns:
+            figline.add_trace(go.Scatter(x=data_smile.index, y=data_smile[col].values,
+                                     name=col,
+                                     mode='markers+lines',
+                                     line=dict(shape='linear'),
+                                     connectgaps=True
+                                     )
+                          )
+        figline.add_vline(x=undPrice, line_width=3, line_dash="dash", line_color="green")
+        figline.show()
 
         return ( dash_table.DataTable(
             id='datatable-selection',
@@ -506,6 +525,20 @@ def get_option_chain(n_clicks ,dict_exchange , right, exchange,ticker ):
                           fontWeight='bold', border='1px solid #d6d6d6', fontSize='1.6vh'),
         style_table={'overflowX': 'auto', 'width': '100%', 'min-width': '100%','border':'1px solid #0b1a50'}
         ) ,'')
+
+#@app.callback([Output('display-option-chain', 'children'), Output('options_exception', 'children')],
+#              Input('simulate_button', 'n_clicks'),
+#              [State('drift_input', 'value'), State('volatility_input', 'value'), State('prob_input', 'value'),
+#               State('intensity_input', 'value'), State('risk_input', 'value'), State('horizon_input', 'value')]
+#             )
+#def get_simulation_baseline(n_clicks, drift, vol, prob, intensity, rf, horizon):
+#    if n_clicks == 0 or drift == None or vol == None or prob == None or intensity == None or rf == None or horizon == None:
+#       return (dash.no_update,html.Div([
+#                'Please fill the rest of the inputs',
+#            ],style=dict(fontSize='1.6vh',fontWeight='bold',color='red',textAlign='center')))
+#    else:
+
+
 if __name__ == '__main__':
     app.run_server(host='localhost',port=8050,debug=True,dev_tools_silence_routes_logging=True)
 

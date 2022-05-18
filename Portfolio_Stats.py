@@ -27,7 +27,7 @@ def prepare_stats_layout(tabs):
                                                 marginTop='')),
                              style=dict(display='inline-block', marginLeft='', textAlign="center", width='100%'))
 
-    table2_header = html.Div(html.H1('Net Value Exposures',
+    table2_header = html.Div(html.H1('Net Value Exposures vs ΔS&P500=1%',
                                      style=dict(fontSize='2vh', fontWeight='bold', color='#0b1a50',
                                                 marginTop='')),
                              style=dict(display='inline-block', marginLeft='', textAlign="center", width='100%'))
@@ -104,8 +104,11 @@ def get_stats_layout(dff):
     top_table_df=top_table_df.reset_index()
     top_table_df.drop('index',axis=1,inplace=True)
     net_positions_df=net_positions_df.reset_index()[['symbol', 'valueDelta' , 'valueGamma', 'valueVega']]
-    tickers_list=top_table_df['symbol'].to_list()
-    dates_list=top_table_df['expiration'].to_list()
+    sum_valuepos = net_positions_df[['symbol', 'valueDelta', 'valueGamma', 'valueVega']].sum(axis=0)
+    sum_valuepos.symbol = "Portfolio"
+    net_positions_df = pd.concat([net_positions_df, sum_valuepos.to_frame().T], ignore_index=True, axis=0)
+    tickers_list=list(set(top_table_df['symbol'].values))
+    dates_list=list(set(top_table_df['expiration'].values))
     net_fig=op.get_payoff(tickers_list[0],dates_list[0])
     df_proc=op.df_proc
 
@@ -145,7 +148,7 @@ def get_stats_layout(dff):
 
 
     surface_fig.update_layout(
-        title_text='<b>Price Volatility Surface<b>',title_x=0.5,
+        title_text='<b>Delta-Gamma-Vega Approximation<b>',title_x=0.5,
         font=dict(size=13, family='Arial', color='#0b1a50'), hoverlabel=dict(
             font_size=13, font_family="Rockwell", font_color='white', bgcolor='#0b1a50'), plot_bgcolor='#F5F5F5',
         paper_bgcolor='#F5F5F5',

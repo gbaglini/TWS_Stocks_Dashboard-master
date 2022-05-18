@@ -281,6 +281,7 @@ class OptionPortflio:
         variation = 0.01
         TotPL = p_valuedelta * variation + 0.5 * variation ** 2 * p_valuegamma + p_valuebeta * variation
         x = np.arange(-0.2, 0.2, 0.01)
+        #xv = np.arange(0.0, 0.4, 0.01)
         T = [p_valuedelta * v + 0.5 * v ** 2 * p_valuegamma for v in x]
         Tv = [p_valuebeta * v for v in x]
 

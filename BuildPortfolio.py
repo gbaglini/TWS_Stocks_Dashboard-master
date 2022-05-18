@@ -21,10 +21,16 @@ exchange_list = set(df_tickers["EXCHANGE"])
 df_temp_table = pd.read_csv("temp_files/TSLA_PUT.csv")
 column_means = df_temp_table.mean()
 df_temp_table = df_temp_table.fillna(column_means)
+cols_to_format2f = ["bid", "ask", "undPrice"]
+cols_to_format3f = ["modelDelta", "modelGamma", "modelIV", "modelPrice", "modelTheta", "modelVega"]
+df_temp_table[cols_to_format2f] = df_temp_table[cols_to_format2f].applymap('{:,.2f}'.format)
+df_temp_table[cols_to_format3f] = df_temp_table[cols_to_format3f].applymap('{:,.3f}'.format)
 try:
     df_temp_table=df_temp_table.drop('Unnamed: 0')
 except:
     pass
+
+
 
 def get_layout(tabs):
 
@@ -150,30 +156,7 @@ def get_layout(tabs):
 
 
 
-    main_table=html.Div( dash_table.DataTable(
-            id='datatable-selection',
-            columns=[
-                {'name': str(i), 'id': str(i), 'deletable': False} for i in df_temp_table.columns
-                # omit the id column
-                if i != 'id'
-            ],
-            data=df_temp_table.to_dict('records'),
-            editable=False,
-            filter_action="native",
-            sort_action="native",
-            sort_mode='multi',
-            row_selectable='multi',
-            selected_rows=[],
-            page_action='native',
-            page_current=0,
-            page_size=10,
-
-        style_cell=dict(textAlign='center', border='1px solid #0b1a50'
-                        , backgroundColor='white', color='black', fontSize='1.6vh', fontWeight=''),
-        style_header=dict(backgroundColor='#0b1a50', color='white',
-                          fontWeight='bold', border='1px solid #d6d6d6', fontSize='1.6vh'),
-        style_table={'overflowX': 'auto', 'width': '100%', 'min-width': '100%','border':'1px solid #0b1a50'}
-        ) ,id='display-option-chain')
+    main_table=html.Div(id='display-option-chain')
 
     quantity_input_header = html.H1('Please Select a Quantity',
                                                      style=dict(fontSize='1.4vh', fontWeight='bold', color='black',
