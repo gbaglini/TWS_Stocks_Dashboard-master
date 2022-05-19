@@ -14,7 +14,6 @@ import torch
 import plotly.graph_objects as go
 
 
-
 class IbConnect:
     """ Class to connect to the database of Interactive Brokers """
 
@@ -37,7 +36,6 @@ class IbConnect:
 
     def read_exchanges(self, ticker, currency, pexchange):
         """ Read available exchanges
-
         :param ticker:
         :param currency:
         :param pexchange:
@@ -57,7 +55,6 @@ class IbConnect:
 
     def read_option_data(self, chains, ticker, right, exchange, currency, pexchange):
         """ Read options chain
-
         :param chains:
         :param ticker:
         :param right:
@@ -237,8 +234,8 @@ class OptionPortflio:
         self.df_options = df_options
         self.df_proc = self.preprocessing(df_options)
         self.stock_list = self.df_proc['symbol'].values
-        #self.df_stock_px, self.d_last_quote = self.get_hist_stock_px(self.stock_list)
-        self.top_table, self.net_value_greeks,self.surface_fig = self.get_value_greeks(self.df_proc)
+        # self.df_stock_px, self.d_last_quote = self.get_hist_stock_px(self.stock_list)
+        self.top_table, self.net_value_greeks, self.surface_fig = self.get_value_greeks(self.df_proc)
 
     def preprocessing(self, z_data):
         z_data1 = z_data.copy()
@@ -255,7 +252,7 @@ class OptionPortflio:
         z_data["posDelta"] = z_data['indicator'] * z_data['modelDelta'] * z_data["Quantity"]
         z_data["posGamma"] = z_data['indicator'] * z_data['modelGamma'] * z_data["Quantity"]
 
-        z_data["volBeta"] = [(1 + np.random.random(1))[0] for i in range(0, z_data.shape[0])]#todo sistemare
+        z_data["volBeta"] = [(1 + np.random.random(1))[0] for i in range(0, z_data.shape[0])]  # todo sistemare
         z_data["posVega"] = z_data['indicator'] * z_data['modelVega'] * z_data["Quantity"]
         z_data = z_data.set_index("symbol")
 
@@ -264,16 +261,20 @@ class OptionPortflio:
         merge["%Δ index"] = 0.01
         merge["%Δ stock"] = merge["%Δ index"] * merge["beta"]
         merge.index.name = "symbol"
-        order_col = ["expiration", "Trade", "right", "Quantity", "multiplier", "undPrice",  "%Δ index", "beta", "%Δ stock", "posDelta", "posGamma", "volBeta", "posVega"]
+        order_col = ["expiration", "Trade", "right", "Quantity", "multiplier", "undPrice", "%Δ index", "beta",
+                     "%Δ stock", "posDelta", "posGamma", "volBeta", "posVega"]
         out_table = merge[order_col].reset_index()
 
-        net_value_greeks = out_table.groupby("symbol").agg({'undPrice': 'last', 'multiplier': 'last', 'beta':'last', 'posDelta': 'sum',
-                                                         'posGamma': 'sum',  'volBeta':'last', 'posVega': 'sum'})
-        net_value_greeks["valueDelta"] = net_value_greeks["posDelta"] * net_value_greeks["undPrice"] * net_value_greeks["multiplier"]
-        net_value_greeks["valueGamma"] = net_value_greeks["posGamma"] * net_value_greeks["undPrice"] * net_value_greeks["multiplier"]
+        net_value_greeks = out_table.groupby("symbol").agg(
+            {'undPrice': 'last', 'multiplier': 'last', 'beta': 'last', 'posDelta': 'sum',
+             'posGamma': 'sum', 'volBeta': 'last', 'posVega': 'sum'})
+        net_value_greeks["valueDelta"] = net_value_greeks["posDelta"] * net_value_greeks["undPrice"] * net_value_greeks[
+            "multiplier"]
+        net_value_greeks["valueGamma"] = net_value_greeks["posGamma"] * net_value_greeks["undPrice"] * net_value_greeks[
+            "multiplier"]
         net_value_greeks["valueVega"] = net_value_greeks["posVega"] * net_value_greeks["multiplier"]
 
-        #merge = net_value_greeks.merge(self.df_betas, left_index=True, right_index=True, how="left")
+        # merge = net_value_greeks.merge(self.df_betas, left_index=True, right_index=True, how="left")
         p_valuedelta = sum(net_value_greeks["valueDelta"] * net_value_greeks["beta"])
         p_valuegamma = sum(np.power(net_value_greeks["beta"], 2) * net_value_greeks["valueDelta"])
         p_valuebeta = sum(net_value_greeks["valueVega"] * net_value_greeks["volBeta"])
@@ -281,7 +282,6 @@ class OptionPortflio:
         variation = 0.01
         TotPL = p_valuedelta * variation + 0.5 * variation ** 2 * p_valuegamma + p_valuebeta * variation
         x = np.arange(-0.2, 0.2, 0.01)
-        #xv = np.arange(0.0, 0.4, 0.01)
         T = [p_valuedelta * v + 0.5 * v ** 2 * p_valuegamma for v in x]
         Tv = [p_valuebeta * v for v in x]
 
@@ -291,7 +291,6 @@ class OptionPortflio:
         a = pd.DataFrame(dgv_3d, index=x, columns=x)
 
         fig = go.Figure(data=[go.Surface(z=a.values, x=a.index, y=a.columns)])
-
 
         return out_table, net_value_greeks, fig
 
@@ -341,7 +340,7 @@ class OptionPortflio:
         fig = px.line(df_pay, x="strike", y="payoff", title='Payoff')
         return fig
 
-    def jump_diffusion_process(self, index, r, sigma, plot = False):
+    def jump_diffusion_process(self, index, r, sigma, plot=False):
 
         def gen_paths(S0, r, sigma, T, n_scenarios, n_timesteps, last_date):
             dt = float(T) / n_scenarios
@@ -407,8 +406,7 @@ class OptionPortflio:
         # calculate new vols
         # apply bsm
 
-
-        #https://www.quantstart.com/articles/European-Vanilla-Call-Put-Option-Pricing-with-Python/
+        # https://www.quantstart.com/articles/European-Vanilla-Call-Put-Option-Pricing-with-Python/
 
         def d_j(j, S, K, r, v, T):
             """
@@ -434,68 +432,3 @@ class OptionPortflio:
             return -S * norm.cdf(-d_j(1, S, K, r, v, T)) + \
                    K * exp(-r * T) * norm.cdf(-d_j(2, S, K, r, v, T))
 
-
-
-
-"""
-import pickle
-with open('company_data.pkl', 'wb') as outp:
-    pickle.dump(ticker, outp, pickle.HIGHEST_PROTOCOL)
-    
-with open('company_data.pkl', 'rb') as inp:
-    ticker = pickle.load(inp)
-
-
-
-    strikes = [strike for strike in chain.strikes
-           if strike % 5 == 0
-           and spxValue - 20 < strike < spxValue + 20]
-    rights = ['P', 'C']  #todo type of option as input
-
-    contracts = [Option('AMD', expiration, strike, right, 'SMART', tradingClass='AMD')
-                 for right in rights
-                 for expiration in expirations
-                 for strike in strikes]
-
-    contracts = ib.qualifyContracts(*contracts)
-    tickers = ib.reqTickers(*contracts)
-    return tickers
-
-
-
-@app.callback(
-    Output("option-chain-table", "data"),
-    Input("select-ticker", "value"),
-    prevent_initial_call = True
-)
-def get_option_data(ticker):
-    if ticker == '':
-        return dash.no_update
-    else:
-        ib = IB()
-        ib.qualifyContracts(ticker)
-        ib.reqMarketDataType(3)
-        chains = ib.reqSecDefOptParams(ticker.symbol, '', ticker.secType, ticker.conId)
-        option_chain = util.df(chains)
-        return option_chain
-
-
-
-@app.callback(
-    Output("economic-calendar-table", "data"),
-    Input("select-date-calendar", "date"),
-    prevent_initial_call = True
-)
-def select_date_calendar(value):
-    import investpy
-    date_0 = datetime.strptime(value, "%Y-%m-%d")
-    date_1 = date_0 + timedelta(days=1)
-    date_0 = date_0.strftime("%d/%m/%Y")
-    date_1 = date_1.strftime("%d/%m/%Y")
-    df = investpy.economic_calendar(
-                        from_date= date_0,
-                        to_date=date_1)
-    return df.to_dict("records")
-
-
-"""

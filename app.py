@@ -40,6 +40,7 @@ app.config.suppress_callback_exceptions = True
 
 components_colors={ 'Main Header Background': ['#0b1a50', '#0b1a50'], 'Main Background': ['#e7f0f9', '#e7f0f9'],
                     'Main Header Text': ['white', 'white']}
+text_font_size = '1.5vh'
 
 
 header_text=html.Div('OptionAnalytica',id='main_header_text',className='main-header',
@@ -149,7 +150,8 @@ dbc.Row([db_logo_img,db_header_text],
 
 
                            ],id='content') ,dcc.Store(id="portfolio_created", data=pd.DataFrame().to_dict(), storage_type="memory")
-
+,dcc.Store(id="df_proc2", data=pd.DataFrame().to_dict(), storage_type="session"),
+dcc.Store(id="df_betas", data=pd.DataFrame().to_dict(), storage_type="session")
 ,dcc.Store(id="stats_tab", data='no', storage_type="memory")
                      ,html.Br(),html.Br(),html.Br()]
 
@@ -165,11 +167,13 @@ dbc.Row([db_logo_img,db_header_text],
 
 def get_stats_tab_layout(tab3_state,portfolio_created):
     if tab3_state=='pressed':
+        print("heeeeeeeeeeeeeeeey")
         dff = pd.DataFrame(portfolio_created)
-        try:
-            return Portfolio_Stats.get_stats_layout(dff)
-        except:
-            raise PreventUpdate
+        print(dff.info())
+      #  try:
+        return Portfolio_Stats.get_stats_layout(dff)
+       # except:
+      #      raise PreventUpdate
 
 
     else:
@@ -228,8 +232,14 @@ def update_tab_content(selected_tab):
         ], style=tabs_styles)
         return ( Scenario_Analysis.get_scenario_layout(tabs),'')
 
-@app.callback(Output('chart1','figure'),Input('options_menu','value'))
-def update_scenarios_chart1(option):
+@app.callback(Output('chart1','figure'),Input('options_menu','value'),
+              [State('drift_input', 'value'), State('volatility_input', 'value'), State('prob_input', 'value'),
+               State('risk_input', 'value'), State('horizon_input', 'value'),
+               State('intensity_input', 'value'),
+               State('df_proc2', 'data'), State('df_betas', 'data')]
+              )
+def update_scenarios_chart1(option,drift_input,volatility_input,prob_input,risk_input,horizon_input,
+                          intensity_input,df_proc,df_betas):
     if option=='Yield Curve':
         fig1=Scenario_Analysis.get_yield_curve()
         fig1.update_layout(
@@ -251,14 +261,52 @@ def update_scenarios_chart1(option):
 
         return fig1
 
+    elif option=='Index Simulations':
+        df_proc = pd.DataFrame(df_proc)
+        df_betas = pd.DataFrame(df_betas)
+        fig2 = Scenario_Analysis.jump_diffusion_process("^GSPC", drift_input, volatility_input, risk_input, horizon_input
+                                                 , prob_input, intensity_input, df_proc, df_betas)[3]
+
+        fig2.update_layout(
+            title_text='<b>Custom tick labels with ticklabelmode="period"<b>', title_x=0.5,
+            font=dict(size=14, family='Arial', color='#0b1a50'), hoverlabel=dict(
+                font_size=14, font_family="Rockwell", font_color='white', bgcolor='#0b1a50'), plot_bgcolor='#F5F5F5',
+            paper_bgcolor='#F5F5F5',
+            xaxis=dict(
+
+                tickwidth=2, tickcolor='#80ced6',
+                ticks="outside",
+                tickson="labels",
+                rangeslider_visible=False
+            ), margin=dict(l=0, r=0, t=40, b=0)
+        )
+
+        fig2.update_xaxes(showgrid=False, showline=True, zeroline=False, linecolor='#0b1a50')
+        fig2.update_yaxes(showgrid=False, showline=True, zeroline=False, linecolor='#0b1a50')
+
+        return fig2
+
     else:
         raise PreventUpdate
 
-@app.callback(Output('graph2','figure'),
-              [Input("tickers_dropdown", "value") ,Input('expirations_dropdown','value')],
-              [State('portfolio_created','data'),State('df_proc','data')]
+
+#Input("tickers_dropdown", "value")
+@app.callback(Output('expirations_dropdown','options'),
+              Input('tickers_dropdown','value'),
+              State('created_portfolio_table','data')
               )
-def update_line_chart(stock,expiration,portfolio_created,df_proc):
+def update_expirations(ticker,table_data):
+    top_table_df=pd.DataFrame(table_data)
+    exp_list=top_table_df[top_table_df['symbol']==ticker]['expiration'].to_list()
+    return [{'label': exp, 'value': exp} for exp in exp_list]
+
+
+
+@app.callback(Output('graph2','figure'),
+              Input('expirations_dropdown','value'),
+              [State('portfolio_created','data'),State('df_proc','data'),State("tickers_dropdown", "value") ]
+              )
+def update_line_chart(expiration,portfolio_created,df_proc,stock):
     '''
     portfolio_df=pd.DataFrame(portfolio_created)
     portfolio_df['undPrice']=portfolio_df['Quantity']
@@ -355,15 +403,16 @@ def save_row(row):
 
 @app.callback([Output('display_selected_row', "children"),Output('portifolio_button', "style"),
                Output('portifolio_in_progress','data')],
-
               Input('adding-option-button', 'n_clicks'),
-
               [State('datatable-selection', "selected_rows"),State('datatable-selection', "data"),
                State('quantity_input','value'),State('trade_options','value'),
                State('portifolio_in_progress','data')],
                prevent_initial_call=True)
 def add_option_to_portfolio(n_clicks,selected_rows,rows,quantity_input,trade_option,current_portifolio_data):
-    if quantity_input == None:
+
+
+
+    if quantity_input == None and n_clicks!=0:
         return ( html.Div([
                 'please enter the quantity in the input box',
             ],style=dict(fontSize='1.7vh',fontWeight='bold',color='red',textAlign='center')) ,dash.no_update,dash.no_update)
@@ -379,9 +428,7 @@ def add_option_to_portfolio(n_clicks,selected_rows,rows,quantity_input,trade_opt
             dff = pd.DataFrame(rows)
 
         dff = dff.iloc[selected_rows]
-        print('2')
-        print(dff)
-        print(type(dff))
+
 
         dff['Quantity']=quantity_input
         dff['Trade']=trade_option
@@ -419,36 +466,133 @@ html.Div([
                 'Portfolio Created Successfully',
             ],style=dict(fontSize='1.7vh',fontWeight='bold',color='green',textAlign='center'))
 '''
-@app.callback([Output('portfolio_msg','children'),Output('portfolio_created','data')],
+# df_proc2 , df_betas
+@app.callback([Output('portfolio_msg','children'),Output('portfolio_created','data'),
+               Output('df_proc2','data'),Output('df_betas','data')
+               ],
               [Input('create-portfolio-button','n_clicks'),Input('select-ticker','value')],
               State('portifolio_in_progress','data'),
               prevent_initial_call=True)
 def create_portfolio(clicks,ticker_changed,portfolio_data):
+    if clicks==0:
+        raise PreventUpdate
     ctx = dash.callback_context
     input_id = ctx.triggered[0]['prop_id'].split('.')[0]
 
+    df = pd.DataFrame(portfolio_data)
+    op=OptionPortflio(df)
+    df_proc=op.df_proc
+    df_betas=op.df_betas
+
     if input_id=='select-ticker':
-        return ('',dash.no_update)
+        return ('',dash.no_update,dash.no_update,dash.no_update)
 
     if clicks > 0:
-        df=pd.DataFrame(portfolio_data)
-        df.to_csv('por.csv',index=False)
         return ( html.Div([
                 'Portfolio Created Successfully',
-            ],style=dict(fontSize='1.7vh',fontWeight='bold',color='green',textAlign='center')) , portfolio_data)
+            ],style=dict(fontSize='1.7vh',fontWeight='bold',color='green',textAlign='center')) , portfolio_data,
+                df_proc.to_dict('records'),df_betas.to_dict('records'))
+
     else:
         raise PreventUpdate
 
-@app.callback([Output('display-option-chain', 'children'),Output('options_exception','children')],
+    # drift_input volatility_input prob_input risk_input horizon_input options_menu Index Simulations Yield Curve
+    # simulate_button
+    #  chart2 middle_table_div bottom_table_div
+
+#(index, drift, sigma, r,  time_in_months, lam, jump, df_proc,df_betas ,plot = True)
+@app.callback([Output('chart2','figure'),Output('middle_table_div','children'),
+               Output('bottom_table_div','children')
+               ],
+              Input('simulate_button','n_clicks'),
+              [State('drift_input','value'),State('volatility_input','value'),State('prob_input','value'),
+               State('risk_input','value'),State('horizon_input','value'),State('options_menu','value'),
+               State('intensity_input','value'),
+               State('df_proc2','data'),State('df_betas','data')],
+              prevent_initial_call=True)
+def simulate(n_clicks,drift_input,volatility_input,prob_input,risk_input,horizon_input,options_menu,intensity_input,df_proc,df_betas):
+    df_proc=pd.DataFrame(df_proc)
+    df_betas=pd.DataFrame(df_betas)
+    df,bottom_table_df,hist,fig1=Scenario_Analysis.jump_diffusion_process("^GSPC",drift_input,volatility_input,risk_input,horizon_input
+                                                 ,prob_input,intensity_input,df_proc,df_betas)
+
+
+
+    hist.update_layout(
+        #title_text='<b>Payoff<b>',title_x=0.5, xaxis_title='<b>Strike<b>',yaxis_title='<b>Payoff<b>',
+        font=dict(size=14, family='Arial', color='#0b1a50'), hoverlabel=dict(
+            font_size=14, font_family="Rockwell", font_color='white', bgcolor='#0b1a50'), plot_bgcolor='#F5F5F5',
+        paper_bgcolor='#F5F5F5',
+        xaxis=dict(
+
+            tickwidth=2, tickcolor='#80ced6',
+            ticks="outside",
+            tickson="labels",
+            rangeslider_visible=False
+        ) ,margin=dict(l=0, r=0, t=40, b=0)
+    )
+
+    hist.update_xaxes(showgrid=False, showline=True, zeroline=False, linecolor='#0b1a50')
+    hist.update_yaxes(showgrid=False, showline=True, zeroline=False, linecolor='#0b1a50')
+
+
+    ret3,ret4=Scenario_Analysis.simulate_baseline_scenario(drift_input, volatility_input, risk_input, horizon_input,df_proc,df_betas)
+    middle_table_df=ret3
+
+    middle_table=dash_table.DataTable(
+                id='middle_table',
+                columns=[
+                    {"name": i, "id": i} for i in middle_table_df.columns
+                ],
+                data=middle_table_df.to_dict("records"),
+                editable=False,
+                row_deletable=False, page_size=6,
+        style_cell=dict(textAlign='center', border='1px solid #0b1a50'
+                        , backgroundColor='white', color='black', fontSize='1.6vh', fontWeight=''),
+        style_header=dict(backgroundColor='#0b1a50', color='white',
+                          fontWeight='bold', border='1px solid #d6d6d6', fontSize='1.6vh'),
+        style_table={'overflowX': 'auto', 'width': '100%', 'min-width': '100%','border':'1px solid #0b1a50'}
+            )
+
+
+    bottom_table=dash_table.DataTable(
+            id='bottom_table',
+            columns=[
+                {"name": i, "id": i} for i in bottom_table_df.columns
+            ],
+            data=bottom_table_df.to_dict("records"),
+            editable=False,
+            row_deletable=False,page_size=6,
+            style_cell=dict(textAlign='center', border='1px solid #0b1a50'
+                            , backgroundColor='white', color='black', fontSize='1.6vh', fontWeight=''),
+            style_header=dict(backgroundColor='#0b1a50', color='white',
+                              fontWeight='bold', border='1px solid #d6d6d6', fontSize='1.6vh'),
+            style_table={'overflowX': 'auto', 'width': '100%', 'min-width': '100%', 'border': '1px solid #0b1a50'}
+        )
+
+
+
+    return (hist,middle_table,bottom_table)
+
+
+
+
+
+
+
+@app.callback([Output('options_exception','children'),
+               Output('portfolio_content','children')],
                Input('get-chain-in', 'n_clicks'),
               [State('store-options-exch', 'data'),State('opt-type', 'value'),
                State('exchanges-out', 'value'),State('select-ticker', 'value')],
                prevent_initial_call=True)
 def get_option_chain(n_clicks ,dict_exchange , right, exchange,ticker ):
-    if n_clicks == 0 or dict_exchange==None or right==None or exchange==None or ticker==None :
-        return (dash.no_update,html.Div([
+
+
+    if dict_exchange==None or right==None or exchange==None or ticker==None :
+        return (html.Div([
                 'Please fill the rest of the dropdowns',
-            ],style=dict(fontSize='1.6vh',fontWeight='bold',color='red',textAlign='center')))
+            ],style=dict(fontSize='1.6vh',fontWeight='bold',color='red',textAlign='center')),dash.no_update)
     else:
         my_df=pd.DataFrame()
         if ticker == "AAPL" and right == "P":
@@ -469,8 +613,8 @@ def get_option_chain(n_clicks ,dict_exchange , right, exchange,ticker ):
 
         cols_to_format2f = ["bid", "ask", "undPrice"]
         cols_to_format3f = ["modelDelta", "modelGamma", "modelIV", "modelPrice", "modelTheta", "modelVega"]
-        my_df[cols_to_format2f] = my_df[cols_to_format2f].applymap('{:,.2f}'.format)
-        my_df[cols_to_format3f] = my_df[cols_to_format3f].applymap('{:,.3f}'.format)
+        my_df[cols_to_format2f] = my_df[cols_to_format2f].applymap(lambda num :round(num,2))
+        my_df[cols_to_format3f] = my_df[cols_to_format3f].applymap(lambda num :round(num,5))
 
         undPrice = my_df["undPrice"].values[0]
         my_df['maturity'] = pd.to_datetime(my_df["expiration"], format='%Y%m%d') - pd.Timestamp.now().normalize()
@@ -480,10 +624,8 @@ def get_option_chain(n_clicks ,dict_exchange , right, exchange,ticker ):
         data_3D = my_df.pivot_table(index='moneyness', columns='maturity', values="modelIV")
 
         fig3D = go.Figure(data=[go.Surface(z=data_3D.values)])
-        fig3D.update_layout(title='Volatilty Surface', autosize=False,
-                          width=500, height=500,
-                          margin=dict(l=65, r=50, b=65, t=90))
-        fig3D.show()
+        fig3D.update_layout(title='Volatilty Surface')
+      #  fig3D.show()
 
 
         data_smile = pd.pivot_table(my_df, values='modelIV', index=['strike'],columns='expiration')
@@ -499,9 +641,9 @@ def get_option_chain(n_clicks ,dict_exchange , right, exchange,ticker ):
                                      )
                           )
         figline.add_vline(x=undPrice, line_width=3, line_dash="dash", line_color="green")
-        figline.show()
+       # figline.show()
 
-        return ( dash_table.DataTable(
+        table= dash_table.DataTable(
             id='datatable-selection',
             columns=[
                 {'name': str(i), 'id': str(i), 'deletable': False} for i in my_df.columns
@@ -517,14 +659,125 @@ def get_option_chain(n_clicks ,dict_exchange , right, exchange,ticker ):
             selected_rows=[],
             page_action='native',
             page_current=0,
-            page_size=10,
+            page_size=8,
 
         style_cell=dict(textAlign='center', border='1px solid #0b1a50'
                         , backgroundColor='white', color='black', fontSize='1.6vh', fontWeight=''),
         style_header=dict(backgroundColor='#0b1a50', color='white',
                           fontWeight='bold', border='1px solid #d6d6d6', fontSize='1.6vh'),
         style_table={'overflowX': 'auto', 'width': '100%', 'min-width': '100%','border':'1px solid #0b1a50'}
-        ) ,'')
+        )
+
+        quantity_input_header = html.H1('Please Select a Quantity',
+                                        style=dict(fontSize='1.4vh', fontWeight='bold', color='black',
+                                                   textAlign='center'))
+        quantity_input = html.Div([quantity_input_header,
+                                   dbc.Input(
+                                       placeholder='select a number ',
+                                       n_submit=0,
+                                       type='number',
+                                       id='quantity_input', autocomplete='off', style=dict(border='1px solid #0b1a50')
+                                   )], style=dict(width='10vw', display='inline-block'))
+
+        add_to_portifolio = html.Div(dbc.Button(
+            "Add To Portfolio", id="adding-option-button", className="ms-auto", n_clicks=0, size='lg',
+            style=dict(fontSize=text_font_size, backgroundColor='#119DFF')
+        ), style=dict(textAlign='center', display='inline-block', marginTop='1.5%', paddingLeft='2vw'))
+
+        trade_text = html.Div(html.H1('Trade', className='filters-header', id='allowance_text',
+                                      style=dict(fontSize='1.7vh', fontWeight='bold',
+                                                 color='#0b1a50',
+                                                 marginTop='')),
+                              style=dict(display='', marginLeft='', textAlign="center"))
+
+        trade_options = html.Div(
+            [
+                dbc.RadioItems(options=[{"label": "Buy", "value": 'Buy'},
+                                        {"label": "Sell", "value": 'Sell'}, ],
+                               value='Buy',
+                               id="trade_options",
+                               inline=False, label_class_name='filter-label', input_class_name='filter-button',
+                               input_checked_class_name='filter-button-checked',
+                               input_style=dict(border='1px solid #0b1a50'),
+                               input_checked_style=dict(backgroundColor='#0b1a50', border='1px solid #0b1a50')
+                               ),
+            ]
+        )
+
+        trade_options_div = html.Div([trade_text, trade_options],
+                                     style=dict(fontSize='', display='inline-block', marginLeft='2vw', textAlign=""))
+
+        add_to_portifolio_div = html.Div([quantity_input, trade_options_div, add_to_portifolio],
+                                         className='add-portifolio-div',
+                                         style=dict(width='100%', display='flex', alignItems='center',
+                                                    justifyContent='center')
+                                         )
+
+        figline.update_layout(
+            title='<b>undPrice<b>', title_x=0.5,
+            font=dict(size=13, family='Arial', color='#0b1a50'), hoverlabel=dict(
+                font_size=13, font_family="Rockwell", font_color='white', bgcolor='#0b1a50'), plot_bgcolor='#F5F5F5',
+            paper_bgcolor='#F5F5F5',
+            xaxis=dict(
+
+                tickwidth=2, tickcolor='#80ced6',
+                ticks="outside",
+                tickson="labels",
+                rangeslider_visible=False
+            ), margin=dict(l=0, r=0, t=40, b=0)
+        )
+
+        figline.update_xaxes(showgrid=False, showline=True, zeroline=False, linecolor='#0b1a50')
+        figline.update_yaxes(showgrid=False, showline=True, zeroline=False, linecolor='#0b1a50')
+
+        graph1_div = html.Div([
+            dcc.Graph(id='figline', config={'displayModeBar': True, 'scrollZoom': True, 'displaylogo': False},
+                      style=dict(height='30vh', backgroundColor='#F5F5F5'), figure=figline
+                      )], id='figline_div'
+        )
+
+        fig3D.update_layout(
+            title_text='<b>Volatilty Surface<b>', title_x=0.5,
+            font=dict(size=13, family='Arial', color='#0b1a50'), hoverlabel=dict(
+                font_size=13, font_family="Rockwell", font_color='white', bgcolor='#0b1a50'), plot_bgcolor='#F5F5F5',
+            paper_bgcolor='#F5F5F5',
+            xaxis=dict(
+
+                tickwidth=2, tickcolor='#80ced6',
+                ticks="outside",
+                tickson="labels",
+                rangeslider_visible=False
+            ), margin=dict(l=0, r=0, t=30, b=0)
+        )
+
+        fig3D.update_xaxes(showgrid=True, showline=True, zeroline=False, linecolor='#0b1a50')
+        fig3D.update_yaxes(showgrid=True, showline=True, zeroline=False, linecolor='#0b1a50')
+
+        graph2_div = html.Div([
+            dcc.Graph(id='fig3D', config={'displayModeBar': True, 'scrollZoom': True, 'displaylogo': False},
+                      style=dict(height='30vh', backgroundColor='#F5F5F5'), figure=fig3D
+                      )], id='fig3D_div'
+        )
+
+        graph1_col=dbc.Col([dbc.Card(dbc.CardBody(
+            [html.Div([dbc.Spinner([graph1_div], size="lg", color="primary", type="border", fullscreen=False)
+
+                       ], style=dict(height=''))])
+            , style=dict(backgroundColor='#F5F5F5',border='0.5px solid #0b1a50')), html.Br()
+        ], xl=dict(size=5, offset=1), lg=dict(size=5, offset=1),
+            md=dict(size=10, offset=1), sm=dict(size=10, offset=1), xs=dict(size=10, offset=1))
+
+        graph2_col=dbc.Col([dbc.Card(dbc.CardBody(
+            [html.Div([dbc.Spinner([graph2_div], size="lg", color="primary", type="border", fullscreen=False)
+
+                       ], style=dict(height=''))])
+            , style=dict(backgroundColor='#F5F5F5',border='0.5px solid #0b1a50')), html.Br()
+        ], xl=dict(size=5, offset=0), lg=dict(size=5, offset=0),
+            md=dict(size=10, offset=1), sm=dict(size=10, offset=1), xs=dict(size=10, offset=1))
+
+        figures_row=dbc.Row([graph1_col,graph2_col])
+        return ('',[table, figures_row,add_to_portifolio_div
+                       ])
 
 #@app.callback([Output('display-option-chain', 'children'), Output('options_exception', 'children')],
 #              Input('simulate_button', 'n_clicks'),
@@ -541,7 +794,3 @@ def get_option_chain(n_clicks ,dict_exchange , right, exchange,ticker ):
 
 if __name__ == '__main__':
     app.run_server(host='localhost',port=8050,debug=True,dev_tools_silence_routes_logging=True)
-
-
-
-
