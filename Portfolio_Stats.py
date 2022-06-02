@@ -106,10 +106,10 @@ def get_stats_layout(dff):
     top_table_df=top_table_df.reset_index()
     top_table_df.drop('index',axis=1,inplace=True)
     net_positions_df=net_positions_df.reset_index()[['symbol', 'valueDelta' , 'valueGamma', 'valueVega']]
-
-
+    net_positions_df[['valueDelta' , 'valueGamma', 'valueVega']] = net_positions_df[['valueDelta' , 'valueGamma', 'valueVega']].applymap(lambda num: round(num, 2))
 
     sum_valuepos = net_positions_df[['symbol', 'valueDelta', 'valueGamma', 'valueVega']].sum(axis=0)
+
 
     sum_valuepos.symbol = "Portfolio"
 

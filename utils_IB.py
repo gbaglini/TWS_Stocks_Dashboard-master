@@ -264,6 +264,7 @@ class OptionPortflio:
         order_col = ["expiration", "Trade", "right", "Quantity", "multiplier", "undPrice", "%Δ index", "beta",
                      "%Δ stock", "posDelta", "posGamma", "volBeta", "posVega"]
         out_table = merge[order_col].reset_index()
+        #out_table[["%Δ index", "beta", "%Δ stock", "posDelta", "posGamma", "volBeta", "posVega"]] = out_table[["%Δ index", "beta", "%Δ stock", "posDelta", "posGamma", "volBeta", "posVega"]].applymap(lambda num: round(num, 2))
 
         net_value_greeks = out_table.groupby("symbol").agg(
             {'undPrice': 'last', 'multiplier': 'last', 'beta': 'last', 'posDelta': 'sum',
@@ -335,6 +336,7 @@ class OptionPortflio:
             undPrice = item["undPrice"]
             op = {'op_type': right, 'strike': strike, 'tr_type': trade, 'op_pr': op_price}
             op_list.append(op)
+
         spot_range = abs(strike - undPrice + 20)
         df_pay = multi_plotter(spot=undPrice, spot_range=spot_range, op_list=op_list)
         fig = px.line(df_pay, x="strike", y="payoff", title='Payoff')

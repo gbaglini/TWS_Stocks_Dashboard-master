@@ -194,7 +194,7 @@ def get_scenario_layout(tabs):
             ) ] ,id='mychart1_div'
         )
 
-    middle_table_header = html.Div(html.H1('Portfolio in 6 Months',
+    middle_table_header = html.Div(html.H1('Baseline Scenario',
                                      style=dict(fontSize='2vh', fontWeight='bold', color='#0b1a50',
                                                 marginTop='')),
                              style=dict(display='inline-block', marginLeft='', textAlign="center", width='100%'))

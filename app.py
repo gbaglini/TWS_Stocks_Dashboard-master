@@ -268,7 +268,7 @@ def update_scenarios_chart1(option,drift_input,volatility_input,prob_input,risk_
                                                  , prob_input, intensity_input, df_proc, df_betas)[3]
 
         fig2.update_layout(
-            title_text='<b>Custom tick labels with ticklabelmode="period"<b>', title_x=0.5,
+            title_text='', title_x=0.5,
             font=dict(size=14, family='Arial', color='#0b1a50'), hoverlabel=dict(
                 font_size=14, font_family="Rockwell", font_color='white', bgcolor='#0b1a50'), plot_bgcolor='#F5F5F5',
             paper_bgcolor='#F5F5F5',
@@ -611,16 +611,17 @@ def get_option_chain(n_clicks ,dict_exchange , right, exchange,ticker ):
         else:
             raise PreventUpdate
 
-        cols_to_format2f = ["bid", "ask", "undPrice"]
+        undPrice = my_df["undPrice"].values[0]
+        my_df["moneyness"] = my_df["strike"] / my_df["undPrice"].astype(float)
+
+        cols_to_format2f = ["bid", "ask", "undPrice", "moneyness"]
         cols_to_format3f = ["modelDelta", "modelGamma", "modelIV", "modelPrice", "modelTheta", "modelVega"]
         my_df[cols_to_format2f] = my_df[cols_to_format2f].applymap(lambda num :round(num,2))
         my_df[cols_to_format3f] = my_df[cols_to_format3f].applymap(lambda num :round(num,5))
 
-        undPrice = my_df["undPrice"].values[0]
+
         my_df['maturity'] = pd.to_datetime(my_df["expiration"], format='%Y%m%d') - pd.Timestamp.now().normalize()
         my_df["maturity"] = my_df["maturity"].astype(str).str.replace("days", "").astype(float)
-        my_df["moneyness"] = my_df["strike"] / my_df["undPrice"].astype(float)
-        # z_data = z_data.set_index("maturity")
         data_3D = my_df.pivot_table(index='moneyness', columns='maturity', values="modelIV")
 
         fig3D = go.Figure(data=[go.Surface(z=data_3D.values)])
@@ -637,10 +638,11 @@ def get_option_chain(n_clicks ,dict_exchange , right, exchange,ticker ):
                                      name=col,
                                      mode='markers+lines',
                                      line=dict(shape='linear'),
-                                     connectgaps=True
+                                     connectgaps=True,
                                      )
                           )
         figline.add_vline(x=undPrice, line_width=3, line_dash="dash", line_color="green")
+        figline.update_layout(title_text='Volatilty Smile')
        # figline.show()
 
         table= dash_table.DataTable(
